@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.example.dao.TurfDao;
 import org.example.model.Turf;
 import org.example.service.ReviewService;
+import org.example.dao.SportDao;
 
 import java.io.IOException;
 
@@ -15,6 +16,7 @@ import java.io.IOException;
 public class TurfDetailsServlet extends HttpServlet {
     private final TurfDao turfDao = new TurfDao();
     private final ReviewService reviewService = new ReviewService();
+    private final SportDao sportDao = new SportDao();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -31,13 +33,15 @@ public class TurfDetailsServlet extends HttpServlet {
             long turfId = Long.parseLong(turfIdStr);
             Turf turf = turfDao.findById(turfId);
 
-            if (turf == null) {
+            if (turf == null || !turf.isActive()) {
                 req.getSession().setAttribute("error", "The requested turf could not be found.");
                 resp.sendRedirect(req.getContextPath() + "/booking");
                 return;
             }
 
             req.setAttribute("turf", turf);
+            turf.setSportIds(turfDao.findSportIdsForTurf(turfId));
+            req.setAttribute("sports", sportDao.findAllActive());
             req.setAttribute("reviews", reviewService.getReviewsForTurf(turfId));
             req.setAttribute("averageRating", reviewService.getAverageRating(turfId));
             req.getRequestDispatcher("/WEB-INF/views/turf-details.jsp").forward(req, resp);

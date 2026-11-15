@@ -30,8 +30,10 @@ public class LoginServlet extends HttpServlet {
             User user = userService.login(email, password);
             if (user != null) {
                 HttpSession session = req.getSession();
+                req.changeSessionId();
                 session.setAttribute("user", user);
-                resp.sendRedirect(req.getContextPath() + "/my-bookings");
+                String next = "/booking".equals(req.getParameter("next")) ? "/booking" : "/my-bookings";
+                resp.sendRedirect(req.getContextPath() + next);
             } else {
                 req.setAttribute("error", "Invalid email or password.");
                 req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, resp);

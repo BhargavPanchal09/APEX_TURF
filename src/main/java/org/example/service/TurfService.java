@@ -17,6 +17,15 @@ public class TurfService {
     }
 
     public void saveTurf(Turf turf, List<Long> sportIds) throws SQLException {
+        if (turf.getName() == null || turf.getName().isBlank() || turf.getName().length() > 150) {
+            throw new IllegalArgumentException("Enter a turf name of 1 to 150 characters.");
+        }
+        if (turf.getLocation() == null || turf.getLocation().isBlank() || turf.getLocation().length() > 200) {
+            throw new IllegalArgumentException("Enter a location of 1 to 200 characters.");
+        }
+        if (turf.getHourlyRate() == null || turf.getHourlyRate().signum() <= 0 || turf.getHourlyRate().scale() > 2) {
+            throw new IllegalArgumentException("Enter a positive hourly rate with no more than two decimal places.");
+        }
         if (turf.getId() == null) {
             // Create new turf
             turfDao.create(turf, sportIds);

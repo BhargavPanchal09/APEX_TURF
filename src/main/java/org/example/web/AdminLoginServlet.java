@@ -27,6 +27,7 @@ public class AdminLoginServlet extends HttpServlet {
         try {
             User user = userService.login(email, password);
             if (user != null && "ADMIN".equals(user.getRole())) {
+                req.changeSessionId();
                 req.getSession().setAttribute("user", user);
                 resp.sendRedirect(req.getContextPath() + "/admin/dashboard");
             } else {

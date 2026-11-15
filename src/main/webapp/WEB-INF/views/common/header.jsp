@@ -2,14 +2,15 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 
 <header class="navbar">
-    <div class="brand">
-        <a href="${pageContext.request.contextPath}/booking" style="color: inherit; text-decoration: none;">APEX TURF</a>
-    </div>
-    <nav class="nav-links">
+    <a class="brand" href="${pageContext.request.contextPath}/booking" aria-label="Apex Turf home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span class="brand-name">APEX TURF<small>PLAY YOUR WAY</small></span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
         <c:choose>
             <c:when test="${not empty sessionScope.user}">
                 <%-- User is Logged IN --%>
-                <span class="nav-welcome">Welcome, ${sessionScope.user.name}</span>
+                <span class="nav-welcome">Hi, ${sessionScope.user.name}</span>
 
                 <a href="${pageContext.request.contextPath}/booking"
                    class="nav-link ${currentPage == 'booking' ? 'active' : ''}">Book a Slot</a>
@@ -22,7 +23,7 @@
                     <a href="${pageContext.request.contextPath}/admin/dashboard" class="nav-link nav-link-admin">Admin Panel</a>
                 </c:if>
 
-                <a href="${pageContext.request.contextPath}/logout" class="nav-link">Logout</a>
+                <form class="nav-logout" method="post" action="${pageContext.request.contextPath}/logout"><button class="nav-link" type="submit">Log out</button></form>
             </c:when>
             <c:otherwise>
                 <%-- User is Logged OUT --%>

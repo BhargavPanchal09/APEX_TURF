@@ -16,8 +16,7 @@ public class AnalyticsService {
         dto.setPeakTimeUsage(analyticsDao.getPeakTimeUsage());
         dto.setBookingsPerDay(analyticsDao.getBookingsPerDay());
 
-        // Placeholder for revenue logic. You could calculate this based on booking duration, etc.
-        dto.setTotalRevenue(dto.getTotalBookings() * 500.0); // Example: 500 currency per booking
+        dto.setTotalRevenue(analyticsDao.getEstimatedRevenue());
 
         return dto;
     }

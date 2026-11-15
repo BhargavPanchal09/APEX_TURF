@@ -40,10 +40,13 @@ public class DatabaseConfig {
             throw new RuntimeException("Failed to load application.properties", e);
         }
 
-        String url = props.getProperty("db.url");
-        String user = props.getProperty("db.username");
-        String pass = props.getProperty("db.password");
-        int poolSize = Integer.parseInt(props.getProperty("db.poolSize", "10"));
+        String url = EnvironmentConfig.get("APEX_DB_URL", props.getProperty("db.url"));
+        String user = EnvironmentConfig.get("APEX_DB_USERNAME", props.getProperty("db.username"));
+        String pass = EnvironmentConfig.get("APEX_DB_PASSWORD", props.getProperty("db.password"));
+        int poolSize = Integer.parseInt(EnvironmentConfig.get("APEX_DB_POOL_SIZE", props.getProperty("db.poolSize", "10")));
+        if (url == null || user == null || pass == null || pass.startsWith("YOUR_")) {
+            throw new IllegalStateException("Database is not configured. Set APEX_DB_URL, APEX_DB_USERNAME, and APEX_DB_PASSWORD.");
+        }
 
         HikariConfig cfg = new HikariConfig();
         cfg.setJdbcUrl(url);
@@ -54,4 +57,5 @@ public class DatabaseConfig {
         cfg.setDriverClassName("com.mysql.cj.jdbc.Driver");
         return new HikariDataSource(cfg);
     }
+
 }

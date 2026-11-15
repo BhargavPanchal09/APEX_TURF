@@ -29,6 +29,7 @@ public class AdminAnalyticsServlet extends HttpServlet {
 
         } catch (Exception e) {
             req.setAttribute("error", "Error loading analytics data: " + e.getMessage());
+            req.setAttribute("dashboardDataJson", gson.toJson(new AnalyticsDashboardDTO()));
             e.printStackTrace();
         }
 

@@ -1,4 +1,5 @@
 target/
+.tools/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -12,6 +13,7 @@ target/
 *.iml
 *.ipr
 /src/main/resources/email.properties
+.env
 
 ### Eclipse ###
 .apt_generated

@@ -7,7 +7,6 @@ import org.example.model.User;
 import org.example.dao.ReviewDao;
 
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,24 +38,16 @@ public class BookingService {
      */
     public long createBooking(long turfId, long sportId, long userId, LocalDateTime start, LocalDateTime end) throws SQLException {
         validateTimes(start, end);
-        boolean available = bookingDao.isSlotAvailable(turfId, sportId, Timestamp.valueOf(start), Timestamp.valueOf(end));
-        if (!available) {
-            throw new IllegalArgumentException("Selected time slot is not available.");
-        }
-
         Booking booking = new Booking(null, userId, turfId, sportId, start, end, "CONFIRMED", LocalDateTime.now());
-        long bookingId = bookingDao.create(booking);
+        long bookingId = bookingDao.createIfAvailable(booking);
 
-        // --- EMAIL LOGIC (now simpler) ---
+        // Email failures must not undo a booking that has already been confirmed.
         try {
-            // We no longer need to fetch the User separately
             Booking detailedBooking = bookingDao.findById(bookingId);
             if (detailedBooking != null) {
                 // Create a temporary user object with the details we need for the email
-                User user = new User();
-                user.setName(detailedBooking.getUserName());
-                user.setEmail(userDao.findById(userId).getEmail()); // We still need email
-                emailService.sendBookingConfirmation(user, detailedBooking);
+                User user = userDao.findById(userId);
+                if (user != null) emailService.sendBookingConfirmation(user, detailedBooking);
             }
         } catch (Exception e) {
             System.err.println("Booking created, but failed to send confirmation email. Booking ID: " + bookingId);
@@ -72,7 +63,7 @@ public class BookingService {
         if (start.isBefore(LocalDateTime.now())) throw new IllegalArgumentException("Start time cannot be in the past");
         Duration d = Duration.between(start, end);
         if (d.toMinutes() < 30) throw new IllegalArgumentException("Minimum booking duration is 30 minutes");
-        if (d.toHours() > 4) throw new IllegalArgumentException("Maximum booking duration is 4 hours");
+        if (d.toMinutes() > 240) throw new IllegalArgumentException("Maximum booking duration is 4 hours");
     }
 
     public List<Booking> getBookingsForUser(long userId) throws SQLException {
@@ -83,7 +74,6 @@ public class BookingService {
                     LocalDateTime.now().isBefore(booking.getStartTime().minusHours(CANCELLATION_CUTOFF_HOURS));
             booking.setCancellable(isCancellable);
 
-            // NEW: Logic for reviewable
             boolean isReviewable = "CONFIRMED".equals(booking.getStatus()) &&
                     booking.getEndTime().isBefore(LocalDateTime.now()) &&
                     !reviewDao.hasUserReviewedBooking(booking.getId());
@@ -96,9 +86,15 @@ public class BookingService {
         Booking booking = bookingDao.findById(bookingId);
         if (booking == null) throw new IllegalArgumentException("Booking not found.");
         if (booking.getUserId() != userId) throw new SecurityException("You are not authorized to cancel this booking.");
-        // ... other validation logic ...
+        boolean cancellable = "CONFIRMED".equals(booking.getStatus()) &&
+                LocalDateTime.now().isBefore(booking.getStartTime().minusHours(CANCELLATION_CUTOFF_HOURS));
+        if (!cancellable) {
+            throw new IllegalStateException("Bookings can only be cancelled at least 12 hours before they start.");
+        }
 
-        bookingDao.updateStatus(bookingId, userId, "CANCELLED_BY_USER");
+        if (!bookingDao.updateStatus(bookingId, userId, "CANCELLED_BY_USER")) {
+            throw new IllegalStateException("This booking can no longer be cancelled.");
+        }
 
         // --- EMAIL LOGIC ---
         try {

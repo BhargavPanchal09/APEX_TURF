@@ -85,4 +85,14 @@ public class AnalyticsDao {
         }
         return 0;
     }
+
+    public double getEstimatedRevenue() throws SQLException {
+        String sql = "SELECT COALESCE(SUM(t.hourly_rate * TIMESTAMPDIFF(SECOND, b.start_time, b.end_time) / 3600), 0) " +
+                "FROM bookings b JOIN turfs t ON t.id = b.turf_id WHERE b.status = 'CONFIRMED'";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getDouble(1) : 0;
+        }
+    }
 }

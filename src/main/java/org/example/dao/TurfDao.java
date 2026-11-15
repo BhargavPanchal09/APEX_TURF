@@ -12,7 +12,7 @@ public class TurfDao {
 
     // CREATE
     public void create(Turf turf, List<Long> sportIds) throws SQLException {
-        String sqlTurf = "INSERT INTO turfs (name, location, active) VALUES (?, ?, ?)";
+        String sqlTurf = "INSERT INTO turfs (name, location, active, hourly_rate) VALUES (?, ?, ?, ?)";
         Connection conn = null;
         try {
             conn = dataSource.getConnection();
@@ -23,6 +23,7 @@ public class TurfDao {
             psTurf.setString(1, turf.getName());
             psTurf.setString(2, turf.getLocation());
             psTurf.setBoolean(3, turf.isActive());
+            psTurf.setBigDecimal(4, turf.getHourlyRate());
             psTurf.executeUpdate();
 
             // Get the newly created turf ID
@@ -45,7 +46,7 @@ public class TurfDao {
 
     // READ ONE
     public Turf findById(long id) throws SQLException {
-        String sql = "SELECT id, name, location, active FROM turfs WHERE id = ?";
+        String sql = "SELECT id, name, location, active, hourly_rate FROM turfs WHERE id = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
@@ -55,7 +56,8 @@ public class TurfDao {
                             rs.getLong("id"),
                             rs.getString("name"),
                             rs.getString("location"),
-                            rs.getBoolean("active")
+                            rs.getBoolean("active"),
+                            rs.getBigDecimal("hourly_rate")
                     );
                 }
             }
@@ -65,7 +67,7 @@ public class TurfDao {
 
     // READ ALL
     public List<Turf> findAll() throws SQLException {
-        String sql = "SELECT id, name, location, active FROM turfs ORDER BY name";
+        String sql = "SELECT id, name, location, active, hourly_rate FROM turfs ORDER BY name";
         List<Turf> list = new ArrayList<>();
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -75,7 +77,7 @@ public class TurfDao {
                         rs.getLong("id"),
                         rs.getString("name"),
                         rs.getString("location"),
-                        rs.getBoolean("active")
+                        rs.getBoolean("active"), rs.getBigDecimal("hourly_rate")
                 );
                 // NEW: We now fetch and attach the sport IDs for each turf.
                 // This provides the data needed by booking.jsp.
@@ -86,9 +88,24 @@ public class TurfDao {
         return list;
     }
 
+    public List<Turf> findAllActive() throws SQLException {
+        String sql = "SELECT id, name, location, active, hourly_rate FROM turfs WHERE active = 1 ORDER BY name";
+        List<Turf> list = new ArrayList<>();
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Turf turf = new Turf(rs.getLong("id"), rs.getString("name"), rs.getString("location"), rs.getBoolean("active"), rs.getBigDecimal("hourly_rate"));
+                turf.setSportIds(findSportIdsForTurf(turf.getId()));
+                list.add(turf);
+            }
+        }
+        return list;
+    }
+
     // UPDATE
     public void update(Turf turf, List<Long> sportIds) throws SQLException {
-        String sqlTurf = "UPDATE turfs SET name = ?, location = ?, active = ? WHERE id = ?";
+        String sqlTurf = "UPDATE turfs SET name = ?, location = ?, active = ?, hourly_rate = ? WHERE id = ?";
         Connection conn = null;
         try {
             conn = dataSource.getConnection();
@@ -99,7 +116,8 @@ public class TurfDao {
             psTurf.setString(1, turf.getName());
             psTurf.setString(2, turf.getLocation());
             psTurf.setBoolean(3, turf.isActive());
-            psTurf.setLong(4, turf.getId());
+            psTurf.setBigDecimal(4, turf.getHourlyRate());
+            psTurf.setLong(5, turf.getId());
             psTurf.executeUpdate();
 
             // Update the turf_sports associations
@@ -119,7 +137,8 @@ public class TurfDao {
 
     // DELETE
     public void delete(long id) throws SQLException {
-        String sql = "DELETE FROM turfs WHERE id = ?";
+        // Preserve historical bookings and reviews; removal from listings is a soft delete.
+        String sql = "UPDATE turfs SET active = 0 WHERE id = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);

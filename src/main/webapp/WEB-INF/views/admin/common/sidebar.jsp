@@ -11,6 +11,6 @@
         <a href="${pageContext.request.contextPath}/admin/reviews" class="${pageTitle == 'Reviews' ? 'active' : ''}">Manage Reviews</a>
     </nav>
     <div class="admin-sidebar-footer">
-        <a href="${pageContext.request.contextPath}/logout">Logout</a>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><button type="submit">Log out</button></form>
     </div>
 </aside>
