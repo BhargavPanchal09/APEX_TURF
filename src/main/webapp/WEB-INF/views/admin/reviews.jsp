@@ -18,6 +18,7 @@
     </c:if>
 
     <div class="admin-card">
+        <c:if test="${empty reviewList}"><div class="empty-state"><h2>No reviews yet</h2><p>Reviews will appear here after customers finish a booking.</p></div></c:if>
         <table class="admin-table">
             <thead>
                 <tr>

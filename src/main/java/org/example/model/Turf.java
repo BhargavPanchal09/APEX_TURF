@@ -1,6 +1,7 @@
 package org.example.model;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 /**
  * Represents a turf facility where users can book time slots.
@@ -9,8 +10,9 @@ public class Turf {
     private Long id;
     private String name;
     private String location;
-    private boolean active;
+    private boolean active = true;
     private List<Long> sportIds;
+    private BigDecimal hourlyRate = BigDecimal.ZERO;
 
     public Turf() {}
 
@@ -21,12 +23,22 @@ public class Turf {
         this.active = active;
     }
 
+    public Turf(String name, String location, boolean active, BigDecimal hourlyRate) {
+        this(name, location, active);
+        this.hourlyRate = hourlyRate;
+    }
+
     // This constructor is used by the DAO when reading from the database
     public Turf(Long id, String name, String location, boolean active) {
         this.id = id;
         this.name = name;
         this.location = location;
         this.active = active;
+    }
+
+    public Turf(Long id, String name, String location, boolean active, BigDecimal hourlyRate) {
+        this(id, name, location, active);
+        this.hourlyRate = hourlyRate;
     }
 
     // Getters and Setters
@@ -38,6 +50,8 @@ public class Turf {
     public void setLocation(String location) { this.location = location; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+    public BigDecimal getHourlyRate() { return hourlyRate; }
+    public void setHourlyRate(BigDecimal hourlyRate) { this.hourlyRate = hourlyRate; }
 
     public List<Long> getSportIds() { return sportIds; }
     public void setSportIds(List<Long> sportIds) { this.sportIds = sportIds; }

@@ -57,6 +57,65 @@ public class BookingDao {
         throw new SQLException("Failed to insert booking, no ID returned");
     }
 
+    /** Serialize bookings for one turf while checking availability and inserting. */
+    public long createIfAvailable(Booking booking) throws SQLException {
+        String turfSql = "SELECT active FROM turfs WHERE id = ? FOR UPDATE";
+        String sportSql = "SELECT COUNT(*) FROM turf_sports ts JOIN sports s ON s.id = ts.sport_id " +
+                "WHERE ts.turf_id = ? AND ts.sport_id = ? AND s.active = 1";
+        String overlapSql = "SELECT COUNT(*) FROM bookings WHERE turf_id = ? AND sport_id = ? " +
+                "AND status = 'CONFIRMED' AND NOT (end_time <= ? OR start_time >= ?)";
+        String insertSql = "INSERT INTO bookings (user_id, turf_id, sport_id, start_time, end_time, status, created_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                try (PreparedStatement ps = conn.prepareStatement(turfSql)) {
+                    ps.setLong(1, booking.getTurfId());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next() || !rs.getBoolean(1)) throw new IllegalArgumentException("Selected turf is unavailable.");
+                    }
+                }
+                try (PreparedStatement ps = conn.prepareStatement(sportSql)) {
+                    ps.setLong(1, booking.getTurfId());
+                    ps.setLong(2, booking.getSportId());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next() || rs.getInt(1) == 0) throw new IllegalArgumentException("Selected sport is not available at this turf.");
+                    }
+                }
+                try (PreparedStatement ps = conn.prepareStatement(overlapSql)) {
+                    ps.setLong(1, booking.getTurfId());
+                    ps.setLong(2, booking.getSportId());
+                    ps.setTimestamp(3, Timestamp.valueOf(booking.getStartTime()));
+                    ps.setTimestamp(4, Timestamp.valueOf(booking.getEndTime()));
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next() && rs.getInt(1) > 0) throw new IllegalArgumentException("Selected time slot is not available.");
+                    }
+                }
+                try (PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setLong(1, booking.getUserId());
+                    ps.setLong(2, booking.getTurfId());
+                    ps.setLong(3, booking.getSportId());
+                    ps.setTimestamp(4, Timestamp.valueOf(booking.getStartTime()));
+                    ps.setTimestamp(5, Timestamp.valueOf(booking.getEndTime()));
+                    ps.setString(6, booking.getStatus());
+                    ps.setTimestamp(7, Timestamp.valueOf(booking.getCreatedAt()));
+                    ps.executeUpdate();
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            long id = rs.getLong(1);
+                            conn.commit();
+                            return id;
+                        }
+                    }
+                }
+                throw new SQLException("Failed to insert booking, no ID returned");
+            } catch (SQLException | RuntimeException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+    }
+
     public Booking findById(long bookingId) throws SQLException {
         // UPDATED: This query now joins with users, turfs, and sports to get all names.
         String sql = "SELECT b.*, u.name as user_name, t.name as turf_name, s.name as sport_name " +
@@ -109,7 +168,8 @@ public class BookingDao {
     }
 
     public boolean updateStatus(long bookingId, long userId, String newStatus) throws SQLException {
-        String sql = "UPDATE bookings SET status = ? WHERE id = ? AND user_id = ?";
+        String sql = "UPDATE bookings SET status = ? WHERE id = ? AND user_id = ? AND status = 'CONFIRMED' " +
+                "AND start_time > DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 12 HOUR)";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, newStatus);

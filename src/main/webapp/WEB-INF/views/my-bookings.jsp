@@ -5,6 +5,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>My Bookings - APEX TURF</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/styles.css"/>
 </head>
@@ -12,8 +13,9 @@
     <jsp:include page="/WEB-INF/views/common/header.jsp"/>
     <main class="container">
         <section class="card">
-            <h1>My Bookings</h1>
-            <p class="subtitle">Here is a list of your past and upcoming reservations.</p>
+            <span class="eyebrow">Your game plan</span>
+            <h1>My bookings</h1>
+            <p class="subtitle">Your upcoming sessions and past games, all in one place.</p>
 
             <c:if test="${not empty successMessage}">
                 <div class="alert success">${successMessage}</div>
@@ -24,6 +26,7 @@
 
             <c:choose>
                 <c:when test="${not empty bookings}">
+                    <div class="table-scroll">
                     <table class="bookings-table">
                         <thead>
                         <tr>
@@ -52,7 +55,7 @@
                                             </form>
                                         </c:when>
                                         <c:when test="${b.reviewable}">
-                                                    <a href="${pageContext.request.contextPath}/review?bookingId=${b.id}" class="btn-review">Leave a Review</a>
+                                            <a href="${pageContext.request.contextPath}/review?bookingId=${b.id}" class="btn-review">Leave a review</a>
                                         </c:when>
                                         <c:otherwise>
                                                     <span class="action-muted">—</span>
@@ -63,9 +66,15 @@
                         </c:forEach>
                         </tbody>
                     </table>
+                    </div>
                 </c:when>
                 <c:otherwise>
-                    <p style="margin-top: 2rem; text-align: center; color: var(--muted);">You have no bookings yet.</p>
+                    <div class="empty-state">
+                        <span class="empty-state-icon" aria-hidden="true">⚽</span>
+                        <h2>No bookings yet</h2>
+                        <p>Your next game is one good slot away. Browse the available turfs and find a time that works.</p>
+                        <a href="${pageContext.request.contextPath}/booking" class="btn-primary">Find a turf <span aria-hidden="true">→</span></a>
+                    </div>
                 </c:otherwise>
             </c:choose>
         </section>

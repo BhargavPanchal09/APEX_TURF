@@ -67,8 +67,8 @@ public class SportDao {
     }
 
     public void delete(long id) throws SQLException {
-        // Note: This is a hard delete. It will fail if sports are referenced elsewhere without ON DELETE CASCADE.
-        String sql = "DELETE FROM sports WHERE id = ?";
+        // Keep historical bookings valid while removing this sport from new bookings.
+        String sql = "UPDATE sports SET active = 0 WHERE id = ?";
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
             ps.executeUpdate();

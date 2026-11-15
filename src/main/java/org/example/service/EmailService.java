@@ -5,6 +5,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.example.model.Booking;
 import org.example.model.User;
+import org.example.config.EnvironmentConfig;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -22,17 +23,19 @@ public class EmailService {
 
     public EmailService() {
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("email.properties")) {
-            if (input == null) {
-                System.out.println("Sorry, unable to find email.properties");
-                throw new RuntimeException("email.properties not found in classpath");
+            if (input != null) {
+                props.load(input);
             }
-            props.load(input);
-            this.senderEmail = props.getProperty("sender.email");
-            this.senderPassword = props.getProperty("sender.password");
-            this.adminEmail = props.getProperty("admin.email");
-        } catch (Exception ex) {
-            throw new RuntimeException("Error loading email properties", ex);
+        } catch (java.io.IOException ex) {
+            throw new IllegalStateException("Unable to read email.properties", ex);
         }
+        props.putIfAbsent("mail.smtp.host", "smtp.gmail.com");
+        props.putIfAbsent("mail.smtp.port", "587");
+        props.putIfAbsent("mail.smtp.auth", "true");
+        props.putIfAbsent("mail.smtp.starttls.enable", "true");
+        this.senderEmail = EnvironmentConfig.get("APEX_MAIL_SENDER", props.getProperty("sender.email"));
+        this.senderPassword = EnvironmentConfig.get("APEX_MAIL_PASSWORD", props.getProperty("sender.password"));
+        this.adminEmail = EnvironmentConfig.get("APEX_ADMIN_EMAIL", props.getProperty("admin.email"));
     }
 
     public void sendBookingConfirmation(User user, Booking booking) {
@@ -69,6 +72,11 @@ public class EmailService {
     }
 
     private void send(String to, String subject, String htmlBody) {
+        if (senderEmail == null || senderPassword == null || senderPassword.startsWith("YOUR_") ||
+                to == null || to.isBlank() || to.contains("example.com")) {
+            System.out.println("Email notifications are disabled; configure APEX_MAIL_SENDER, APEX_MAIL_PASSWORD, and APEX_ADMIN_EMAIL to enable them.");
+            return;
+        }
         Session session = Session.getInstance(props, new Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
                 return new PasswordAuthentication(senderEmail, senderPassword);

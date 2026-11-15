@@ -37,8 +37,7 @@ public class AdminFilter implements Filter {
             // User is an admin, allow access to the requested admin page
             chain.doFilter(request, response);
         } else {
-            // User is not an admin, redirect them to the regular user login page
-            httpResponse.sendRedirect(httpRequest.getContextPath() + "/login?error=admin_required");
+            httpResponse.sendRedirect(httpRequest.getContextPath() + "/admin/login?error=admin_required");
         }
     }
 }

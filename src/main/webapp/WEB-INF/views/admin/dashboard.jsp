@@ -39,6 +39,7 @@
     </div>
 
     <div class="admin-card">
+        <c:if test="${empty allBookings}"><div class="empty-state"><span class="empty-state-icon" aria-hidden="true">◷</span><h2>No bookings match these filters</h2><p>Try clearing the filters or check back after customers make a reservation.</p></div></c:if>
         <div class="export-link">
             <a href="${pageContext.request.contextPath}/admin/bookings/export?turfFilter=${selectedTurf}&sportFilter=${selectedSport}&dateFilter=${selectedDate}">Export as CSV</a>
         </div>

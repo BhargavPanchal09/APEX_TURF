@@ -1,5 +1,6 @@
 package org.example.web;
 
+import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -22,11 +23,13 @@ public class BookingServlet extends HttpServlet {
     private final BookingService bookingService = new BookingService();
     private final TurfDao turfDao = new TurfDao();
     private final SportDao sportDao = new SportDao();
+    private final Gson gson = new Gson();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
-            List<Turf> turfs = turfDao.findAll();
+            List<Turf> turfs = turfDao.findAllActive();
+            if (turfs.isEmpty()) req.setAttribute("error", "No active turfs are available yet.");
             req.setAttribute("turfs", turfs);
             req.setAttribute("sports", sportDao.findAllActive());
             req.setAttribute("currentPage", "booking");
@@ -52,7 +55,7 @@ public class BookingServlet extends HttpServlet {
 
         if (user == null) {
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            resp.getWriter().write("{\"success\": false, \"message\": \"You must be logged in to book.\"}");
+            resp.getWriter().write(gson.toJson(java.util.Map.of("success", false, "message", "You must be logged in to book.")));
             return;
         }
 
@@ -64,11 +67,15 @@ public class BookingServlet extends HttpServlet {
 
             bookingService.createBooking(turfId, sportId, user.getId(), start, end);
 
-            resp.getWriter().write("{\"success\": true, \"message\": \"Booking confirmed!\"}");
+            resp.getWriter().write(gson.toJson(java.util.Map.of("success", true, "message", "Booking confirmed!")));
 
-        } catch (Exception ex) {
+        } catch (IllegalArgumentException ex) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"success\": false, \"message\": \"" + ex.getMessage() + "\"}");
+            resp.getWriter().write(gson.toJson(java.util.Map.of("success", false, "message", ex.getMessage())));
+        } catch (Exception ex) {
+            getServletContext().log("Unable to create booking", ex);
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write(gson.toJson(java.util.Map.of("success", false, "message", "The booking could not be completed. Please try again.")));
         }
     }
 }

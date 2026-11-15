@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @WebServlet("/admin/turfs")
 public class AdminTurfServlet extends HttpServlet {
@@ -46,16 +47,31 @@ public class AdminTurfServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if ("deactivate".equals(req.getParameter("action"))) {
+            try {
+                turfService.deleteTurf(Long.parseLong(req.getParameter("id")));
+                resp.sendRedirect(req.getContextPath() + "/admin/turfs");
+            } catch (Exception e) {
+                throw new ServletException(e);
+            }
+            return;
+        }
         String idStr = req.getParameter("id");
         String name = req.getParameter("name");
         String location = req.getParameter("location");
+        BigDecimal hourlyRate;
+        try {
+            hourlyRate = new BigDecimal(req.getParameter("hourlyRate"));
+        } catch (RuntimeException e) {
+            hourlyRate = BigDecimal.ZERO;
+        }
         boolean active = "on".equals(req.getParameter("active"));
         String[] sportIdsStr = req.getParameterValues("sportIds");
 
         List<Long> sportIds = (sportIdsStr == null) ? null :
                 Arrays.stream(sportIdsStr).map(Long::parseLong).collect(Collectors.toList());
 
-        Turf turf = new Turf(name, location, active);
+        Turf turf = new Turf(name, location, active, hourlyRate);
         if (idStr != null && !idStr.isEmpty()) {
             turf.setId(Long.parseLong(idStr));
         }
@@ -63,6 +79,13 @@ public class AdminTurfServlet extends HttpServlet {
         try {
             turfService.saveTurf(turf, sportIds);
             resp.sendRedirect(req.getContextPath() + "/admin/turfs");
+        } catch (IllegalArgumentException e) {
+            req.setAttribute("error", e.getMessage());
+            req.setAttribute("pageTitle", idStr == null || idStr.isEmpty() ? "New Turf" : "Edit Turf");
+            req.setAttribute("turf", turf);
+            req.setAttribute("allSports", sportDao.findAllActive());
+            req.setAttribute("assignedSportIds", sportIds == null ? List.of() : sportIds);
+            req.getRequestDispatcher("/WEB-INF/views/admin/turf-form.jsp").forward(req, resp);
         } catch (Exception e) {
             throw new ServletException(e);
         }

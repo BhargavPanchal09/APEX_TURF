@@ -10,6 +10,7 @@
     </div>
 
     <div class="admin-card">
+        <c:if test="${empty sportList}"><div class="empty-state"><h2>No sports added</h2><p>Add a sport to assign it to one or more turfs.</p><a href="${pageContext.request.contextPath}/admin/sports?action=new" class="btn-primary">Add a sport</a></div></c:if>
         <table class="admin-table">
             <thead>
                 <tr>
@@ -31,7 +32,7 @@
                         </td>
                         <td>
                             <a href="${pageContext.request.contextPath}/admin/sports?action=edit&id=${sport.id}" class="btn-edit">Edit</a>
-                            <a href="${pageContext.request.contextPath}/admin/sports?action=delete&id=${sport.id}" class="btn-delete" onclick="return confirm('Are you sure? Deleting a sport may affect existing turf associations.')">Delete</a>
+                            <form method="post" action="${pageContext.request.contextPath}/admin/sports" onsubmit="return confirm('Deactivate this sport? Existing bookings and turf assignments will be preserved.')"><input type="hidden" name="action" value="deactivate"><input type="hidden" name="id" value="${sport.id}"><button class="btn-delete" type="submit">Deactivate</button></form>
                         </td>
                     </tr>
                 </c:forEach>

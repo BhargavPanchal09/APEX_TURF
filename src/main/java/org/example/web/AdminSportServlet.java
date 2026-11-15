@@ -41,6 +41,15 @@ public class AdminSportServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if ("deactivate".equals(req.getParameter("action"))) {
+            try {
+                sportService.deleteSport(Long.parseLong(req.getParameter("id")));
+                resp.sendRedirect(req.getContextPath() + "/admin/sports");
+            } catch (Exception e) {
+                throw new ServletException(e);
+            }
+            return;
+        }
         String idStr = req.getParameter("id");
         String name = req.getParameter("name");
         boolean active = "on".equals(req.getParameter("active"));

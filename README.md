@@ -33,7 +33,7 @@ The application features **role-based access control**, **automated email notifi
 | Feature | Description |
 |---------|-------------|
 | **User Authentication** | Secure registration and login with BCrypt-hashed passwords |
-| **Browse Turfs** | View detailed turf pages with available sports, location info |
+| **Browse Turfs** | View turf details with location, supported sports, ratings, and hourly rates |
 | **Dynamic Booking** | Sports dropdown dynamically updates based on the selected turf |
 | **My Bookings** | View complete booking history with upcoming and past reservations |
 | **Cancel Bookings** | Cancel upcoming bookings up to 12 hours before the start time |
@@ -44,10 +44,10 @@ The application features **role-based access control**, **automated email notifi
 |---------|-------------|
 | **Secure Admin Login** | Separate role-based login at `/admin/login` |
 | **Booking Dashboard** | View, filter, cancel, or re-confirm any booking from all users |
-| **Turf Management** | Full CRUD — add, edit, and deactivate turfs with sport assignments |
+| **Turf Management** | Add and edit turfs, rates, status, and sport assignments |
 | **Sport Management** | Full CRUD — add, edit, and delete sports available on the platform |
 | **Review Moderation** | View and manage user reviews across all turfs |
-| **Analytics Dashboard** | Visual analytics with booking trends, revenue, and usage stats |
+| **Analytics Dashboard** | Visual analytics for booking trends and usage, with estimated confirmed booking value at current turf rates |
 | **CSV Export** | Export filtered booking data to CSV for reporting |
 
 ### ⚙️ System Features
@@ -88,81 +88,63 @@ Make sure you have the following installed on your system:
 - **Apache Tomcat 10.1+** → [Download](https://tomcat.apache.org/download-10.cgi)
 - **MySQL Server 8.0+** → [Download](https://dev.mysql.com/downloads/mysql/)
 
+On Windows, install Temurin 17 from PowerShell with `winget install --exact --id EclipseAdoptium.Temurin.17.JDK`. Install Maven with Chocolatey (`choco install maven`) or download the Maven binary archive and add its `bin` directory to `PATH`. Install Tomcat and MySQL using their Windows installers linked above.
+
 ### Installation
 
-#### 1️⃣ Clone the Repository
+#### 1️⃣ Open the repository
 
-```bash
-git clone https://github.com/YOUR_USERNAME/APEX_TURF.git
-cd APEX_TURF
+```powershell
+cd "D:\College Projects\APEX_TURF\APEX_TURF"
 ```
 
-#### 2️⃣ Set Up the Database
+#### 2️⃣ Create the database and sample turfs
 
-Open your MySQL client and run:
+From PowerShell, initialize MySQL and load the bundled demo data (replace `root` if you use a different MySQL account):
 
-```sql
-CREATE DATABASE apex_turf;
-USE apex_turf;
+```powershell
+Get-Content -Raw src/main/resources/db/schema.sql | mysql -u root -p
+Get-Content -Raw src/main/resources/db/migrations/V1__turf_hourly_rate.sql | mysql -u root -p apex_turf
+Get-Content -Raw src/main/resources/db/seed.sql | mysql -u root -p apex_turf
 ```
 
-Then execute the schema from the [Database Schema](#-database-schema) section below to create all required tables.
+The seed contains two sample turfs and three sports. It does not create accounts or passwords.
+After upgrading an older database, review existing rates in the admin turf editor; migrated facilities default to zero until you set their actual hourly rates.
 
-#### 3️⃣ Configure Database Credentials
+#### 3️⃣ Configure local settings
 
-Edit `src/main/resources/application.properties` with your local MySQL credentials:
+Copy `.env.example` to `.env` if it does not already exist, then enter your MySQL username and password. `.env` is read from the current working directory and is ignored by Git.
 
-```properties
-db.url=jdbc:mysql://localhost:3306/apex_turf?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-db.username=root
-db.password=YOUR_MYSQL_PASSWORD
+```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
 ```
 
-#### 4️⃣ Configure Email Notifications *(Optional)*
+Email is optional. To enable Gmail notifications, set `APEX_MAIL_SENDER`, `APEX_MAIL_PASSWORD` (a Gmail App Password), and `APEX_ADMIN_EMAIL` in `.env`. Without them, bookings work and email is skipped.
 
-Copy the example config and fill in your Gmail credentials:
+#### 4️⃣ Build and deploy
 
-```bash
-cp src/main/resources/email.properties.example src/main/resources/email.properties
-```
+Install Java 17+, Maven 3.9+, and Tomcat 10.1+. Then, from the repository root:
 
-Edit `email.properties`:
-
-```properties
-sender.email=your-email@gmail.com
-sender.password=YOUR_16_CHARACTER_APP_PASSWORD
-admin.email=admin-notification-email@example.com
-```
-
-> **Note:** You need a [Gmail App Password](https://support.google.com/accounts/answer/185833) (not your regular password). Enable 2-Step Verification in your Google Account first.
-
-#### 5️⃣ Build the Project
-
-```bash
+```powershell
 mvn clean package
+Copy-Item target/apex-turf.war "$env:CATALINA_HOME\webapps\apex-turf.war" -Force
 ```
 
-This generates `target/apex-turf.war`.
+Load `.env` into the current PowerShell session and run Tomcat in that same session:
 
-#### 6️⃣ Deploy to Tomcat
-
-Copy the WAR file to your Tomcat installation:
-
-```bash
-cp target/apex-turf.war /path/to/tomcat/webapps/
+```powershell
+Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$' -and -not $Matches[1].StartsWith('#')) {
+        [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2].Trim('"', "'"), 'Process')
+    }
+}
+& "$env:CATALINA_HOME\bin\catalina.bat" run
 ```
 
-Start Tomcat:
+Set `CATALINA_HOME` to your Tomcat 10.1 installation directory before deploying, for example `$env:CATALINA_HOME = 'C:\tools\apache-tomcat-10.1'`. The app reads database and email settings from process environment variables first, then `.env` in its working directory. For Tomcat service installs, configure the same `APEX_*` variables in the service environment.
 
-```bash
-# Linux / macOS
-cd /path/to/tomcat/bin && ./startup.sh
-
-# Windows
-cd \path\to\tomcat\bin && startup.bat
-```
-
-#### 7️⃣ Access the Application
+#### 5️⃣ Access the application
 
 | Page | URL |
 |------|-----|
@@ -171,77 +153,17 @@ cd \path\to\tomcat\bin && startup.bat
 | 📝 User Signup | `http://localhost:8080/apex-turf/signup` |
 | 🛡️ Admin Login | `http://localhost:8080/apex-turf/admin/login` |
 
+Create a normal account at `/signup`, then promote that account to admin in MySQL (replace the email):
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
+
 ---
 
 ## 🗄️ Database Schema
 
-Run the following SQL in your `apex_turf` database to create all required tables:
-
-```sql
--- Users table
-CREATE TABLE users (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    phone VARCHAR(32) NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(10) NOT NULL DEFAULT 'USER'
-);
-
--- Turfs table
-CREATE TABLE turfs (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(150) NOT NULL,
-    location VARCHAR(200) NOT NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1
-);
-
--- Sports table
-CREATE TABLE sports (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1
-);
-
--- Many-to-Many: Turf ↔ Sport
-CREATE TABLE turf_sports (
-    turf_id BIGINT NOT NULL,
-    sport_id BIGINT NOT NULL,
-    PRIMARY KEY (turf_id, sport_id),
-    FOREIGN KEY (turf_id) REFERENCES turfs(id) ON DELETE CASCADE,
-    FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE CASCADE
-);
-
--- Bookings table
-CREATE TABLE bookings (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
-    turf_id BIGINT NOT NULL,
-    sport_id BIGINT NOT NULL,
-    start_time DATETIME NOT NULL,
-    end_time DATETIME NOT NULL,
-    status VARCHAR(32) NOT NULL,
-    created_at DATETIME NOT NULL,
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id),
-    CONSTRAINT fk_turf FOREIGN KEY (turf_id) REFERENCES turfs(id),
-    CONSTRAINT fk_sport FOREIGN KEY (sport_id) REFERENCES sports(id),
-    INDEX idx_turf_time (turf_id, start_time, end_time)
-);
-
--- Reviews table
-CREATE TABLE reviews (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
-    turf_id BIGINT NOT NULL,
-    booking_id BIGINT NOT NULL,
-    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    comment TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (turf_id) REFERENCES turfs(id),
-    FOREIGN KEY (booking_id) REFERENCES bookings(id)
-);
-```
+The complete, version-controlled schema is in [`src/main/resources/db/schema.sql`](src/main/resources/db/schema.sql); sample sports and turfs are in [`src/main/resources/db/seed.sql`](src/main/resources/db/seed.sql). An idempotent migration adds hourly rates to an older schema. Load these using the PowerShell commands above. The schema keeps one review per booking and indexes the booking lookup columns. Analytics estimates confirmed booking value using the turf’s current hourly rate; it does not represent collected payments.
 
 ### ER Diagram
 
@@ -259,6 +181,7 @@ CREATE TABLE reviews (
      │             │ id (PK)      │            │
      │             │ name         │            │
      │             │ location     │            │
+│             │ hourly_rate  │            │
      │             │ active       │            │
      │             └──────┬───────┘            │
      │                    │                    │
@@ -299,7 +222,8 @@ APEX_TURF/
 │   └── main/
 │       ├── java/org/example/
 │       │   ├── config/
-│       │   │   └── DatabaseConfig.java      # HikariCP datasource singleton
+│       │   │   ├── DatabaseConfig.java      # HikariCP datasource singleton
+│       │   │   └── EnvironmentConfig.java   # Process/.env configuration
 │       │   ├── model/
 │       │   │   ├── User.java                # User entity
 │       │   │   ├── Turf.java                # Turf entity
@@ -342,8 +266,9 @@ APEX_TURF/
 │       │       ├── AdminAnalyticsServlet.java
 │       │       └── AdminBookingExportServlet.java
 │       ├── resources/
-│       │   ├── application.properties       # Database config
-│       │   └── email.properties.example     # Email config template
+│       │   ├── application.properties       # Database defaults
+│       │   ├── email.properties.example     # Email config template
+│       │   └── db/                          # Schema, seed, and migration scripts
 │       └── webapp/
 │           ├── index.jsp                    # Landing page
 │           ├── assets/css/

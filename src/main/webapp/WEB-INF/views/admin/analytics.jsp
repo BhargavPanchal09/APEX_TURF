@@ -7,6 +7,7 @@
     <div class="admin-header">
         <h1>Analytics Dashboard</h1>
     </div>
+    <c:if test="${not empty error}"><div class="alert error"><c:out value="${error}"/></div></c:if>
 
     <div class="kpi-grid">
         <div class="admin-card kpi-card">
@@ -14,7 +15,7 @@
             <span class="kpi-value" id="total-bookings-val">0</span>
         </div>
         <div class="admin-card kpi-card">
-            <h4>Total Revenue (Est.)</h4>
+            <h4>Estimated confirmed value · current rates</h4>
             <span class="kpi-value">&#8377;<span id="total-revenue-val">0</span></span>
         </div>
     </div>
@@ -44,13 +45,23 @@
 
 <script>
     // Safely parse the JSON data from the servlet
-    const dashboardData = JSON.parse('${dashboardDataJson}');
+    const dashboardData = ${dashboardDataJson};
+    dashboardData.popularTurfs = dashboardData.popularTurfs || {};
+    dashboardData.popularSports = dashboardData.popularSports || {};
+    dashboardData.peakTimeUsage = dashboardData.peakTimeUsage || {};
+    dashboardData.bookingsPerDay = dashboardData.bookingsPerDay || {};
 
     document.addEventListener('DOMContentLoaded', function() {
         // Populate KPI Cards
         document.getElementById('total-bookings-val').textContent = dashboardData.totalBookings;
         document.getElementById('total-revenue-val').textContent = dashboardData.totalRevenue.toLocaleString('en-IN');
 
+        if (!window.Chart) {
+            document.querySelector('.chart-grid').innerHTML = '<div class="chart-container">Charts could not load. Refresh this page to try again.</div>';
+            return;
+        }
+        Chart.defaults.color = '#a0a99a';
+        Chart.defaults.font.family = "'DM Sans', sans-serif";
         // Render Charts
         renderLineChart('bookingsPerDayChart', 'Daily Bookings', dashboardData.bookingsPerDay);
         renderBarChart('peakTimeChart', 'Bookings per Hour', dashboardData.peakTimeUsage);
@@ -67,8 +78,8 @@
                 datasets: [{
                     label: label,
                     data: Object.values(data),
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: '#c6f36b',
+                    backgroundColor: 'rgba(198, 243, 107, 0.12)',
                     fill: true,
                     tension: 0.1
                 }]
@@ -85,8 +96,8 @@
                 datasets: [{
                     label: label,
                     data: Object.values(data),
-                    backgroundColor: 'rgba(231, 76, 60, 0.8)',
-                    borderColor: 'rgba(231, 76, 60, 1)',
+                    backgroundColor: 'rgba(198, 243, 107, 0.72)',
+                    borderColor: '#c6f36b',
                     borderWidth: 1
                 }]
             }
@@ -103,11 +114,11 @@
                     label: 'Bookings',
                     data: Object.values(data),
                     backgroundColor: [
-                        'rgba(26, 188, 156, 0.8)',
-                        'rgba(241, 196, 15, 0.8)',
-                        'rgba(155, 89, 182, 0.8)',
-                        'rgba(52, 73, 94, 0.8)',
-                        'rgba(230, 126, 34, 0.8)'
+                        'rgba(198, 243, 107, 0.88)',
+                        'rgba(121, 166, 87, 0.88)',
+                        'rgba(75, 130, 103, 0.88)',
+                        'rgba(204, 177, 105, 0.88)',
+                        'rgba(122, 137, 107, 0.88)'
                     ],
                     hoverOffset: 4
                 }]

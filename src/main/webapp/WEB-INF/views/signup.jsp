@@ -5,15 +5,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign Up - APEX TURF</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/styles.css"/>
 </head>
 <body>
     <jsp:include page="/WEB-INF/views/common/header.jsp"/>
-    <main class="container">
-        <section class="card">
-            <h1>Create Account</h1>
-            <p class="subtitle">Join APEX TURF to start booking.</p>
+    <main class="auth-wrap">
+        <section class="card auth-card">
+            <span class="eyebrow">Your next game starts here</span>
+            <h1>Create your account</h1>
+            <p class="subtitle">Keep your bookings in one place and get straight to the game.</p>
 
             <c:if test="${not empty error}">
                 <div class="alert error">${error}</div>
@@ -34,10 +36,11 @@
                 </label>
                 <label>
                     <span>Password</span>
-                    <input type="password" name="password" required placeholder="Create a strong password">
+                    <input type="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password" placeholder="At least 8 characters">
                 </label>
-                <button type="submit" class="btn-primary">Sign Up</button>
+                <button type="submit" class="btn-primary">Create account <span aria-hidden="true">→</span></button>
             </form>
+            <p class="auth-aside">Already have an account? <a href="${pageContext.request.contextPath}/login">Log in</a></p>
         </section>
     </main>
 </body>

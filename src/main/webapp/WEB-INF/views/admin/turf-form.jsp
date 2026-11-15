@@ -5,6 +5,7 @@
 
 <main class="admin-main">
     <h1><c:out value="${turf.id == null ? 'Add New' : 'Edit'}"/> Turf</h1>
+    <c:if test="${not empty error}"><div class="alert error"><c:out value="${error}"/></div></c:if>
 
     <c:if test="${turf.id != null}">
             <div class="view-public-link">
@@ -26,6 +27,12 @@
             <div class="form-group">
                 <label for="location">Location</label>
                 <input type="text" id="location" name="location" value="${turf.location}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="hourlyRate">Hourly rate (INR)</label>
+                <input type="number" id="hourlyRate" name="hourlyRate" value="${turf.hourlyRate}" min="1" max="999999" step="0.01" inputmode="decimal" required>
+                <small class="form-help">Customers see this rate when choosing a turf.</small>
             </div>
 
             <div class="form-group">
